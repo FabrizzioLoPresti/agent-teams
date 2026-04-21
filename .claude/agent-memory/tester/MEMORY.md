@@ -1,0 +1,3 @@
+- [Handler invocation via duck-typing](feedback_handler_invocation.md) — access `procedure['~orpc']?.handler ?? procedure.handler` to call the raw handler without middleware
+- [Mock conventions for ORPC handler tests](feedback_mock_conventions.md) — mock `@/db/db`, Sentry, use module-scope vi.fn(), dynamic import handler inside helper
+- [Public handler args (no auth, no input)](feedback_public_handler_args.md) — public handlers only need `errors` in HandlerArgs, no context or input
