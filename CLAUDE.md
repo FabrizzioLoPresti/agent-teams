@@ -1,133 +1,97 @@
-# Orchestrator — mandatory Agent Teams model
+# CLAUDE.md
 
-**YOU ARE THE ORCHESTRATOR. YOU NEVER DO WORK INLINE.**
+## Orchestrator Rule
 
-Every feature, bug fix, or multi-layer task MUST be handled by spawning agents via the `Agent` tool (Agent Teams). Your only job is to receive the request, decide which agents to invoke and in what order, spawn them, wait for results, and synthesize.
+> **CRITICAL — READ FIRST**
+>
+> The main Claude Code agent is the **Orchestrator**. The Orchestrator **only delegates** — it NEVER writes files, edits files, or implements code directly. Every task is dispatched to a subagent via the `Agent` tool (Claude Code Agent Teams). The subagent does the work and returns only a status/summary to the Orchestrator.
 
-**You are forbidden from:**
-- Writing code, specs, schemas, types, components, migrations, or documentation
-- Reading files (Read, Glob, Grep) to gather context for implementation decisions
-- Editing or writing files (Edit, Write) under any circumstance
-- Running shell commands (Bash) to inspect or modify the codebase
+## Project Overview
 
-**The only permitted tools are:** `Agent`, `SendMessage`, `TaskCreate/Update/Get/List`, `ToolSearch`, and text output to communicate with the user.
+Alta Cancha is a sports-field booking platform for football and padel courts in Argentina. Owners manage complexes (facilities) with fields (courts), and customers search and book time slots.
 
-**If you find yourself reaching for Read, Edit, Write, Bash, Grep, or Glob — STOP. Delegate to the appropriate agent instead.**
+## Architecture
 
-## Spec-Kit Pipeline
+**Stack:** TanStack Start (SSR) + Vite + Nitro · TanStack Router (file-based) · TanStack Query · Tailwind CSS v4 + Shadcn/Radix
 
-Orchestrate these phases in order. Never skip or advance without verifying the previous phase's artifacts exist.
+**Layer map:**
 
-| # | Phase | Agent | Artifacts |
-|---|-------|-------|-----------|
-| 1 | SPECIFY | `speckit-requirements-analyst` | `docs/specs/<feature>/spec.md` |
-| 2 | CLARIFY | `speckit-clarification-agent` | `spec.md` refined |
-| 3 | PLAN | `speckit-architecture-designer` | `plan.md`, `data-model.md`, `api-spec/` |
-| 4 | ANALYZE | `speckit-consistency-analyzer` | Consistency report |
-| 5 | TASKS | `speckit-task-planner` | `tasks.md` |
-| 6 | IMPLEMENT | `speckit-implementer` | Code per task list |
-| 7 | VALIDATE | `speckit-review-validator` | Validation report |
+| Layer | Location |
+|---|---|
+| Zod schemas | `src/orpc/schemas/<domain>.ts` |
+| oRPC handlers | `src/orpc/router/<domain>.ts` |
+| React Query hooks | `src/data/<domain>/<verb>-<entity>.ts` |
+| TypeScript types | `src/types/<domain>.ts` |
+| Config / constants | `src/config/<domain>.ts` |
+| Routes | `src/routes/<prefix>/<section>/` |
+| Components | `src/components/<domain>/<type>/` |
+| Utilities | `src/utils/<domain>.ts` |
 
-**Parallelism rule:** run independent agents simultaneously with `run_in_background: true` in a single message. Sequential phases must await the prior result before spawning the next agent.
+**Route prefixes:** `_general/` (public) · `_customers/` · `_owners/` · `_users/` · `auth/`
 
-**Derive the `<feature-name>` slug** (kebab-case) from the feature description and pass it to every downstream agent. All artifacts go under `docs/specs/<feature-name>/` — never at the project root.
+**API:** All server logic goes through oRPC at `/api/rpc`. Never REST. Client: `src/orpc/client.ts` exports `orpc` (TQ utils) and `client` (raw typed).
 
-## Commands
+**Auth:** Better Auth. Three roles: `customerComplex`, `ownerComplex`, `user`. Role fixed at registration. oRPC uses `authorizedMiddleware` (protected) or `baseInputValidationMiddleware` (public).
 
-Dev commands are in `package.json` scripts. Infrastructure (PostgreSQL 16 + Redis) via `docker-compose.yml` + `.env`.
+## Domain Model
 
-Add Shadcn components: `pnpx shadcn@latest add <component>`
+**Complex** → **Fields** → **FieldWorkingSchedules** → **PriceSlots**
 
-## Documentation
+Business rules:
+- `Field.fieldType` is `FULL`, `HALF_A`, or `HALF_B`. A FULL field with `isDividable=true` auto-creates HALF_A/B sub-fields on creation.
+- When a Field is created, `FieldWorkingSchedule` rows are copied from the parent Complex's schedules. Complex must have schedules configured first.
+- Timestamps always UTC (`@db.Timestamptz`). Open/close hours stored as `HH:MM` strings, interpreted using `Complex.timezone` (default: `America/Argentina/Buenos_Aires`).
+- Deletes are soft (`isActive = false`). Cannot soft-delete a Field with future PENDING/CONFIRMED bookings.
+- `Booking.version` for optimistic locking.
 
-Load on demand from `docs/` — never pre-load:
-- `docs/architecture/` — stack, domain model, layers, auth, data flow, key decisions
-- `docs/decisions/` — ADRs 001–012
-- `docs/runbooks/database-migrations.md` — Prisma migration runbook
+## Agent Orchestration
 
-## Spec Artifacts
+### Orchestration Rules
 
-All Spec-Kit artifacts are saved under `docs/specs/<feature-name>/` (kebab-case feature name). **Never save spec artifacts at the project root.**
+1. **Delegate everything.** The Orchestrator never writes, edits, or reads source files. All file operations happen inside subagents.
+2. **Decompose first.** Break the feature into phases: spec → clarify → design → plan → consistency check → implement → validate. Each phase maps to exactly one subagent.
+3. **Gate on success.** Do not advance to the next phase until the current subagent reports success. On failure, re-delegate with corrective context.
+4. **No parallel writes.** Subagents that write files (`speckit-requirements-analyst`, `speckit-architecture-designer`, `speckit-task-planner`, `speckit-implementer`) must never run concurrently against the same feature directory.
+5. **Read-only agents may parallelize.** `speckit-consistency-analyzer` and `speckit-review-validator` can run concurrently with each other.
 
-| Artifact | Path | Producer |
-|----------|------|----------|
-| `spec.md` | `docs/specs/<feature-name>/spec.md` | speckit-requirements-analyst |
-| `plan.md` | `docs/specs/<feature-name>/plan.md` | speckit-architecture-designer |
-| `data-model.md` | `docs/specs/<feature-name>/data-model.md` | speckit-architecture-designer |
-| `api-spec/` | `docs/specs/<feature-name>/api-spec/` | speckit-architecture-designer |
-| `tasks.md` | `docs/specs/<feature-name>/tasks.md` | speckit-task-planner |
+### Subagents
 
-The `<feature-name>` slug is derived by the speckit-orchestrator from the feature description (kebab-case) and passed to all downstream agents.
+| Agent | Role | Skills |
+|---|---|---|
+| `speckit-requirements-analyst` | Turns natural language into `spec.md` | `speckit-specify`, `speckit-constitution` |
+| `speckit-clarification-agent` | Resolves ambiguities in `spec.md` | `speckit-clarify` |
+| `speckit-architecture-designer` | Produces `plan.md` from `spec.md` | `speckit-plan` |
+| `speckit-task-planner` | Generates dependency-ordered `tasks.md`; optionally creates GitHub Issues | `speckit-tasks`, `speckit-taskstoissues` |
+| `speckit-consistency-analyzer` | Cross-artifact quality check — read-only, no file modifications | `speckit-analyze`, `speckit-checklist` |
+| `speckit-implementer` | Writes production code task-by-task with incremental git commits | `speckit-implement`, `speckit-git-*` |
+| `speckit-review-validator` | Final acceptance review against spec and tasks | `speckit-analyze`, `speckit-checklist` |
 
-## Rules
+### Project Skills
 
-@.claude/rules/folder-structure.md
-@.claude/rules/imports.md
-@.claude/rules/tech-stack.md
+These skills encode project-specific patterns. Apply them whenever working in the corresponding area — they are the authoritative reference, not CLAUDE.md.
 
-Critical rules (always apply, no need to load the doc):
-- ORPC only for server-client communication — no REST or GraphQL
-- Zod schemas for all API inputs in `src/orpc/schemas/`
-- TypeScript strict mode — no `any`, no unused locals/params
-- State variables holding IDs or entity properties must use indexed access types — `ComplexType['id']` not `string`
-- No `useMemo` / `useCallback` / `React.memo` — React Compiler handles memoization
-- Run `pnpm db:generate` after every Prisma schema change
-- `routeTree.gen.ts` is auto-generated — never edit
-- Sentry: wrap server functions with `Sentry.startSpan(...)` — import from `@sentry/tanstackstart-react`
-- Use `pnpm dev` for development; run `pnpm build` only to verify production behavior
+| Skill | Apply when |
+|---|---|
+| `auth` | Any procedure, route, or component touching auth, sessions, users, or roles |
+| `orpc-endpoints` | Any file in `src/orpc/` or `src/data/` |
+| `react-components` | Any `.tsx` component file |
+| `db-migrations` | Any edit to `prisma/schema.prisma` or `db:*` command |
+| `folder-structure` | Any new file, domain, or entity |
+| `imports` | Any TypeScript/TSX file (import ordering) |
+| `frontend-design` | Any new page, layout, or significant UI surface |
+| `vitest-tests` | Any test file or when writing, running, or fixing tests |
 
-## Agents
+### Speckit Git Skills
 
-Subagents in `.claude/agents/`. You are the orchestrator — spawn them directly, never delegate orchestration to another agent.
+Used internally by `speckit-implementer` for branch and commit management: `speckit-git-feature`, `speckit-git-commit`, `speckit-git-validate`, `speckit-git-remote`, `speckit-git-initialize`.
 
-**Hard rules — violations are not allowed:**
-- NEVER write code, specs, types, migrations, or documentation inline
-- NEVER use Bash, Edit, Write, Read, Glob, or Grep — for any reason
-- NEVER spawn a single agent when multiple independent agents could run in parallel — use `run_in_background: true` in a single message
-- NEVER advance to the next phase without receiving and verifying the previous agent's output
+## Project Rules
 
-### Agent roster
-
-- **`speckit-requirements-analyst`** — Translates feature ideas and PRDs into `docs/specs/<feature-name>/spec.md`.
-- **`speckit-clarification-agent`** — Reviews and refines `docs/specs/<feature-name>/spec.md` before architecture begins.
-- **`speckit-architecture-designer`** — Produces `plan.md`, `data-model.md`, and `api-spec/` contracts in `docs/specs/<feature-name>/`.
-- **`speckit-consistency-analyzer`** — Cross-validates all artifacts in `docs/specs/<feature-name>/` before implementation.
-- **`speckit-task-planner`** — Decomposes `plan.md` into `docs/specs/<feature-name>/tasks.md`.
-- **`speckit-implementer`** — Executes `tasks.md` in dependency order using project skills.
-- **`speckit-review-validator`** — Final gatekeeper: verifies implementation against spec, runs tests and security audit.
-
-## Skills
-
-Load with the `Skill` tool. Full list and descriptions are in the system context.
-
-- **`orpc-endpoint`** — Scaffolds endpoints: schemas with composition patterns, types, handler, Sentry, transactions, router registration.
-- **`create-ui-component`** — React components: data hooks, container/presentational split, Shadcn, strict TS.
-- **`authentication`** — Better-Auth: protected routes, session access, auth guards in handlers, RBAC, auth flows.
-- **`db-migration`** — Prisma migrations following ADR-002, ADR-009, ADR-011 conventions.
-- **`vitest-tester`** — Vitest tests: happy paths, error cases, auth guards, concurrency edge cases.
-- **`security-review`** — Security audit: ownership checks, unprotected endpoints, input validation, RBAC violations.
-- **`code-review`** — Code review: security, performance, N+1 queries, correctness.
-- **`frontend-design`** — Production-grade UI. Use when aesthetics (typography, color, layout, animation) are the focus.
-
-### When to invoke skills
-
-| Situation | Skill to invoke |
-|-----------|----------------|
-| Creating or modifying an ORPC endpoint | `orpc-endpoint` |
-| Creating or modifying a React component, data hook, or util | `create-ui-component` |
-| Working with auth (protected routes, sessions, RBAC, sign-in/sign-up flows) | `authentication` |
-| Running or creating a database migration | `db-migration` |
-| Writing or generating tests | `vitest-tester` |
-| Performing a security audit | `security-review` |
-| Reviewing code before marking a task done | `code-review` |
-| UI/design work where aesthetics are the focus | `frontend-design` |
-
-### When to read rules
-
-| Before doing this | Read this file |
-|-------------------|---------------|
-| Creating any file or writing any import statement | `.claude/rules/imports.md` |
-| Deciding where a file belongs in the project | `.claude/rules/folder-structure.md` |
-| Choosing a library, pattern, or technology | `.claude/rules/tech-stack.md` |
-
-**Agents load skills and rules on demand based on the task at hand — not from their own hardcoded configuration. CLAUDE.md is the authoritative source for project-specific guidance.**
+- **No direct oRPC calls in components.** Always go through `src/data/*/` hooks.
+- **Prisma client lives in `generated/prisma/`**, not `node_modules`. Import via `import { prisma } from '@/db/db'`.
+- **Env vars** via `import { env } from '@/env/server'` (server-only) or `@/env/client` (VITE_ prefix). Never access `process.env` directly.
+- **React Compiler is active.** Do not add `useMemo`, `useCallback`, or `React.memo` — the compiler handles memoization.
+- **Path alias `@/` maps to `src/`.** Always use alias imports, never deep relative paths.
+- **Soft-deletes only** for Complex and Field. Never hard-delete these entities.
+- **Add Shadcn components** via `pnpx shadcn@latest add <component>`.
+- **No git operations.** Agents must NOT run `git add`, `git commit`, `git push`, or any other git write command. All version control is managed by the developer.

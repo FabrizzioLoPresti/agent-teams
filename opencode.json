@@ -1,0 +1,97 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": ["@ex-machina/opencode-anthropic-auth"],
+  "agent": {
+    "speckit-orchestrator": {
+      "mode": "primary",
+      "model": "anthropic/claude-sonnet-4-6",
+      "prompt": "{file:.opencode/agent/speckit-orchestrator.md}",
+      "temperature": 0.3,
+      "permission": {
+        "edit": "deny",
+        "write": "deny",
+        "bash": "deny",
+        "task": {
+          "*": "allow"
+        }
+      }
+    },
+    "speckit-requirements-analyst": {
+      "mode": "subagent",
+      "model": "anthropic/claude-sonnet-4-6",
+      "prompt": "{file:.opencode/agent/speckit-requirements-analyst.md}",
+      "temperature": 0.3,
+      "hidden": true,
+      "permission": {
+        "bash": "deny"
+      }
+    },
+    "speckit-clarification": {
+      "mode": "subagent",
+      "model": "anthropic/claude-haiku-4-5-20251001",
+      "prompt": "{file:.opencode/agent/speckit-clarification.md}",
+      "temperature": 0.2,
+      "hidden": true,
+      "permission": {
+        "bash": "deny"
+      }
+    },
+    "speckit-architecture-designer": {
+      "mode": "subagent",
+      "model": "anthropic/claude-opus-4-7",
+      "prompt": "{file:.opencode/agent/speckit-architecture-designer.md}",
+      "temperature": 0.3,
+      "hidden": true,
+      "permission": {
+        "bash": "deny"
+      }
+    },
+    "speckit-task-planner": {
+      "mode": "subagent",
+      "model": "anthropic/claude-sonnet-4-6",
+      "prompt": "{file:.opencode/agent/speckit-task-planner.md}",
+      "temperature": 0.2,
+      "hidden": true,
+      "permission": {
+        "bash": {
+          "*": "deny",
+          "gh *": "allow"
+        }
+      }
+    },
+    "speckit-consistency-analyzer": {
+      "mode": "subagent",
+      "model": "anthropic/claude-sonnet-4-6",
+      "prompt": "{file:.opencode/agent/speckit-consistency-analyzer.md}",
+      "temperature": 0.1,
+      "hidden": true,
+      "permission": {
+        "edit": "deny",
+        "write": "deny",
+        "bash": "deny"
+      }
+    },
+    "speckit-implementer": {
+      "mode": "subagent",
+      "model": "anthropic/claude-sonnet-4-6",
+      "prompt": "{file:.opencode/agent/speckit-implementer.md}",
+      "temperature": 0.2,
+      "hidden": true,
+      "permission": {
+        "bash": "ask"
+      }
+    },
+    "speckit-review-validator": {
+      "mode": "subagent",
+      "model": "anthropic/claude-opus-4-7",
+      "prompt": "{file:.opencode/agent/speckit-review-validator.md}",
+      "temperature": 0.1,
+      "hidden": true,
+      "permission": {
+        "edit": "deny",
+        "write": "deny",
+        "bash": "ask"
+      }
+    }
+  }
+}
