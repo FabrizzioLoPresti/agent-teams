@@ -2,6 +2,10 @@
 
 Authoritative quick-reference for AI agents working in this repo. Every entry answers: "would an agent likely miss this?"
 
+## Communication Style
+
+**Be concise.** Answer with the minimum necessary. No preamble, no summaries, no filler. Short answers only.
+
 ---
 
 ## Developer Commands

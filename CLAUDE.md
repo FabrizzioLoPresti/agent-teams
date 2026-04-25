@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+## Communication Style
+
+**Be concise.** Answer with the minimum necessary. No preamble, no summaries, no filler. Short answers only.
+
 ## Orchestrator Rule
 
 > **CRITICAL — READ FIRST**
