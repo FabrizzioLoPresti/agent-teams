@@ -167,49 +167,9 @@ Defined on the `base` middleware: `RATE_LIMITED`, `UNAUTHORIZED`, `BAD_REQUEST`,
 
 ---
 
-## OpenCode / SpecKit Agent System
+## Agent System
 
-Defined in `opencode.json`. The primary agent (`speckit-orchestrator`) **delegates only** — it never writes files. Subagents do the actual work.
-
-Agent prompt files: `.opencode/agent/speckit-*.md`
-SpecKit workflow templates: `.specify/`
-
-### Orchestration Rules
-
-1. **Delegate everything.** The Orchestrator never writes, edits, or reads source files. All file operations happen inside subagents.
-2. **Decompose first.** Break the feature into phases: spec → clarify → design → plan → consistency check → implement → validate. Each phase maps to exactly one subagent.
-3. **Gate on success.** Do not advance to the next phase until the current subagent reports success. On failure, re-delegate with corrective context.
-4. **No parallel writes.** Subagents that write files (`speckit-requirements-analyst`, `speckit-architecture-designer`, `speckit-task-planner`, `speckit-implementer`) must never run concurrently against the same feature directory.
-5. **Read-only agents may parallelize.** `speckit-consistency-analyzer` and `speckit-review-validator` can run concurrently with each other.
-6. **No git operations.** Agents must NOT run `git add`, `git commit`, `git push`, or any other git write command. All version control is managed by the developer.
-
-### Subagents
-
-| Agent | Role | Skills |
-|---|---|---|
-| `speckit-requirements-analyst` | Turns natural language into `spec.md` | `speckit-specify`, `speckit-constitution` |
-| `speckit-clarification-agent` | Resolves ambiguities in `spec.md` | `speckit-clarify` |
-| `speckit-architecture-designer` | Produces `plan.md` from `spec.md` | `speckit-plan` |
-| `speckit-task-planner` | Generates dependency-ordered `tasks.md`; optionally creates GitHub Issues | `speckit-tasks`, `speckit-taskstoissues` |
-| `speckit-consistency-analyzer` | Cross-artifact quality check — read-only, no file modifications | `speckit-analyze`, `speckit-checklist` |
-| `speckit-implementer` | Writes production code task-by-task | `speckit-implement` |
-| `speckit-review-validator` | Final acceptance review against spec and tasks | `speckit-analyze`, `speckit-checklist` |
-
-### Project Skills
-
-These skills encode project-specific patterns. Apply them whenever working in the corresponding area.
-
-| Skill | Apply when |
-|---|---|
-| `auth` | Any procedure, route, or component touching auth, sessions, users, or roles |
-| `orpc-endpoints` | Any file in `src/orpc/` or `src/data/` |
-| `react-components` | Any `.tsx` component file |
-| `db-migrations` | Any edit to `prisma/schema.prisma` or `db:*` command |
-| `folder-structure` | Any new file, domain, or entity |
-| `imports` | Any TypeScript/TSX file (import ordering) |
-| `frontend-design` | Any new page, layout, or significant UI surface |
-| `vitest-tests` | Any test file or when writing, running, or fixing tests |
-
-### Speckit Git Skills
-
-`speckit-git-feature`, `speckit-git-commit`, `speckit-git-validate`, `speckit-git-remote`, `speckit-git-initialize` — these skills exist but **agents must not invoke git write commands**. Git is managed by the developer only.
+- OpenCode agent prompts: `.opencode/agent/speckit-*.md`
+- Claude Code orchestration rules: `CLAUDE.md`
+- SpecKit workflow templates: `.specify/`
+- Project skills: `.agents/skills/`

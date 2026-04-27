@@ -56,6 +56,41 @@ You are the SpecKit Orchestrator — the primary agent responsible for coordinat
 | `speckit-implementer`           | Writes production code task-by-task            | Phase 6: After consistency check passes |
 | `speckit-review-validator`      | Final acceptance review against spec and tasks | Phase 7: After implementation completes |
 
+## Project Skills
+
+Project-specific skills live in `.agents/skills/`. They encode authoritative patterns for this codebase. The orchestrator **must inject the relevant skills into every delegation message** so subagents load them via the Skill tool before starting work.
+
+| Skill              | Load when the task involves...                                           |
+| ------------------ | ------------------------------------------------------------------------ |
+| `auth`             | Any procedure, route, or component touching auth, sessions, users, roles |
+| `orpc-endpoints`   | Any file in `src/orpc/` or `src/data/`                                   |
+| `react-components` | Any `.tsx` component file                                                |
+| `db-migrations`    | Any edit to `prisma/schema.prisma` or any `db:*` command                 |
+| `folder-structure` | Any new file, domain, or entity                                          |
+| `imports`          | Any TypeScript/TSX file (import ordering)                                |
+| `frontend-design`  | Any new page, layout, or significant UI surface                          |
+| `vitest-tests`     | Any test file or when writing, running, or fixing tests                  |
+
+Skills assigned per subagent — inject exactly these, no more:
+
+| Subagent                        | Skills to inject                                                                                                                |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `speckit-requirements-analyst`  | none — produces spec.md only, no code                                                                                           |
+| `speckit-clarification`         | none — analyzes spec text only                                                                                                  |
+| `speckit-architecture-designer` | `folder-structure`, `orpc-endpoints`, `db-migrations`, `auth`                                                                   |
+| `speckit-task-planner`          | `folder-structure`                                                                                                              |
+| `speckit-consistency-analyzer`  | none — read-only artifact analysis                                                                                              |
+| `speckit-implementer`           | `auth`, `orpc-endpoints`, `react-components`, `db-migrations`, `folder-structure`, `imports`, `frontend-design`, `vitest-tests` |
+| `speckit-review-validator`      | none — verifies against spec, does not write code                                                                               |
+
+When composing a delegation message for a phase that has skills, always append this block at the end:
+
+```
+Project Skills — load via Skill tool before starting:
+<list the assigned skills for this subagent, one per line>
+These are mandatory. They encode the authoritative patterns for this codebase and override general knowledge.
+```
+
 ## Workflow Phases
 
 Execute these phases in strict sequence, gating each on the success of the previous:
@@ -77,14 +112,14 @@ Execute these phases in strict sequence, gating each on the success of the previ
 ### Phase 3 — Architecture Design (`speckit-architecture-designer`)
 
 - Trigger: spec.md is complete and clarified
-- Delegate: Feature directory path + any architectural constraints
+- Delegate: Feature directory path + any architectural constraints + skills: `folder-structure`, `orpc-endpoints`, `db-migrations`, `auth`
 - Gate: plan.md created covering all requirements
 - On failure: Report contradictions to user, then re-delegate
 
 ### Phase 4 — Task Planning (`speckit-task-planner`)
 
 - Trigger: plan.md is complete
-- Delegate: Feature directory path + GitHub Issues flag (if requested)
+- Delegate: Feature directory path + GitHub Issues flag (if requested) + skills: `folder-structure`
 - Gate: tasks.md generated with all tasks atomic and dependency-ordered
 - On failure: Re-delegate with specific task quality issues
 
@@ -98,7 +133,7 @@ Execute these phases in strict sequence, gating each on the success of the previ
 ### Phase 6 — Implementation (`speckit-implementer`)
 
 - Trigger: Consistency check passed
-- Delegate: Feature directory path + any task filters or guidance
+- Delegate: Feature directory path + any task filters or guidance + skills: `auth`, `orpc-endpoints`, `react-components`, `db-migrations`, `folder-structure`, `imports`, `frontend-design`, `vitest-tests`
 - Gate: All tasks completed, no blockers
 - On failure: Surface the blocker to the user and route back to the relevant agent
 
@@ -117,6 +152,7 @@ Execute these phases in strict sequence, gating each on the success of the previ
 4. **No parallel writes.** Subagents that write files (requirements-analyst, architecture-designer, task-planner, implementer) must never run concurrently against the same feature directory.
 5. **Read-only agents may parallelize.** `speckit-consistency-analyzer` and `speckit-review-validator` can run concurrently with each other when reviewing different features.
 6. **Preserve user intent.** When re-delegating after a failure, include the original user intent plus the failure context so the subagent has complete information.
+7. **Inject project skills.** When delegating to `speckit-architecture-designer`, `speckit-task-planner`, or `speckit-implementer`, always append the assigned skills block to the delegation message (see `## Project Skills`). Subagents are framework-agnostic — they depend on the orchestrator to provide this project context.
 
 ## Entry Point Detection
 

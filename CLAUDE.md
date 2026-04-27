@@ -72,18 +72,38 @@ Business rules:
 
 ### Project Skills
 
-These skills encode project-specific patterns. Apply them whenever working in the corresponding area — they are the authoritative reference, not CLAUDE.md.
+Project-specific skills live in `.agents/skills/`. They are the authoritative reference for this codebase — they override general knowledge. Subagents are framework-agnostic, so **you must inject the relevant skills into every delegation message** so subagents load them via the Skill tool before starting work.
 
-| Skill | Apply when |
-|---|---|
-| `auth` | Any procedure, route, or component touching auth, sessions, users, or roles |
-| `orpc-endpoints` | Any file in `src/orpc/` or `src/data/` |
-| `react-components` | Any `.tsx` component file |
-| `db-migrations` | Any edit to `prisma/schema.prisma` or `db:*` command |
-| `folder-structure` | Any new file, domain, or entity |
-| `imports` | Any TypeScript/TSX file (import ordering) |
-| `frontend-design` | Any new page, layout, or significant UI surface |
-| `vitest-tests` | Any test file or when writing, running, or fixing tests |
+| Skill              | Load when the task involves...                                           |
+| ------------------ | ------------------------------------------------------------------------ |
+| `auth`             | Any procedure, route, or component touching auth, sessions, users, roles |
+| `orpc-endpoints`   | Any file in `src/orpc/` or `src/data/`                                   |
+| `react-components` | Any `.tsx` component file                                                |
+| `db-migrations`    | Any edit to `prisma/schema.prisma` or any `db:*` command                 |
+| `folder-structure` | Any new file, domain, or entity                                          |
+| `imports`          | Any TypeScript/TSX file (import ordering)                                |
+| `frontend-design`  | Any new page, layout, or significant UI surface                          |
+| `vitest-tests`     | Any test file or when writing, running, or fixing tests                  |
+
+Skills assigned per subagent — inject exactly these when delegating:
+
+| Subagent                        | Skills to inject                                                                                                                |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `speckit-requirements-analyst`  | none — produces spec.md only, no code                                                                                           |
+| `speckit-clarification-agent`   | none — analyzes spec text only                                                                                                  |
+| `speckit-architecture-designer` | `folder-structure`, `orpc-endpoints`, `db-migrations`, `auth`                                                                   |
+| `speckit-task-planner`          | `folder-structure`                                                                                                              |
+| `speckit-consistency-analyzer`  | none — read-only artifact analysis                                                                                              |
+| `speckit-implementer`           | `auth`, `orpc-endpoints`, `react-components`, `db-migrations`, `folder-structure`, `imports`, `frontend-design`, `vitest-tests` |
+| `speckit-review-validator`      | none — verifies against spec, does not write code                                                                               |
+
+When delegating to a subagent that has assigned skills, append this block to the task prompt:
+
+```
+Project Skills — load via Skill tool before starting:
+<list the assigned skills, one per line>
+These are mandatory. They encode the authoritative patterns for this codebase and override general knowledge.
+```
 
 ### Speckit Git Skills
 
