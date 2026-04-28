@@ -531,6 +531,38 @@ toast.warning('Advertencia.')
 
 ---
 
+## Precise typing rule
+
+**Never use primitive `string`, `number`, or `boolean` when a more specific type exists.**
+
+When a prop, parameter, or variable holds the `id` of a domain entity, always use the indexed type from the corresponding domain type instead of `string`:
+
+```ts
+// ❌ Wrong — too broad
+type Props = {
+  complexId: string | undefined
+  fieldId: string
+}
+
+// ✅ Correct — exact, refactor-safe
+import type { ComplexType } from '@/types/complex'
+import type { FieldType } from '@/types/field'
+
+type Props = {
+  complexId: ComplexType['id'] | undefined
+  fieldId: FieldType['id']
+}
+```
+
+This applies everywhere: component props, hook parameters, oRPC input schemas (use `z.cuid()` not `z.string()`), and data hook signatures.
+
+Benefits:
+- If the `id` field type changes in the schema, TypeScript propagates the error automatically
+- Communicates intent — a reader knows this is an entity ID, not an arbitrary string
+- Prevents accidentally passing the wrong entity's ID (e.g. `complexId` where `fieldId` is expected)
+
+---
+
 ## Quick reference
 
 | Need | Import from |
