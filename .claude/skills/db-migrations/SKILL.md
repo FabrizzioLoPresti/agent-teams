@@ -20,6 +20,9 @@ pnpm db:generate   # Regenerate Prisma client (TypeScript types)
 pnpm db:push       # Push schema without migration — dev/prototyping ONLY
 pnpm db:studio     # Open Prisma Studio
 pnpm db:seed       # Seed the database
+
+# Run migration with an explicit name (skips the interactive name prompt)
+pnpx prisma migrate dev --name migration_name
 ```
 
 Run `pnpm db:generate` **every time** you change `schema.prisma` — even if you already ran `db:migrate`. The migration updates the DB; `generate` updates the TypeScript types.

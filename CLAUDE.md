@@ -52,11 +52,12 @@ Business rules:
 
 ### Orchestration Rules
 
-1. **Delegate everything.** The Orchestrator never writes, edits, or reads source files. All file operations happen inside subagents.
-2. **Decompose first.** Break the feature into phases: spec → clarify → design → plan → consistency check → implement → validate. Each phase maps to exactly one subagent.
-3. **Gate on success.** Do not advance to the next phase until the current subagent reports success. On failure, re-delegate with corrective context.
-4. **No parallel writes.** Subagents that write files (`speckit-requirements-analyst`, `speckit-architecture-designer`, `speckit-task-planner`, `speckit-implementer`) must never run concurrently against the same feature directory.
-5. **Read-only agents may parallelize.** `speckit-consistency-analyzer` and `speckit-review-validator` can run concurrently with each other.
+1. **Clarify before starting.** If the feature description is ambiguous, incomplete, or leaves open questions about scope, behavior, or constraints, ask the user targeted clarification questions **before** delegating to any subagent. Do not begin Phase 1 until you have enough information to describe the feature without guessing.
+2. **Delegate everything.** The Orchestrator never writes, edits, or reads source files. All file operations happen inside subagents.
+3. **Decompose first.** Break the feature into phases: spec → clarify → design → plan → consistency check → implement → validate. Each phase maps to exactly one subagent.
+4. **Gate on success.** Do not advance to the next phase until the current subagent reports success. On failure, re-delegate with corrective context.
+5. **No parallel writes.** Subagents that write files (`speckit-requirements-analyst`, `speckit-architecture-designer`, `speckit-task-planner`, `speckit-implementer`) must never run concurrently against the same feature directory.
+6. **Read-only agents may parallelize.** `speckit-consistency-analyzer` and `speckit-review-validator` can run concurrently with each other.
 
 ### Subagents
 
