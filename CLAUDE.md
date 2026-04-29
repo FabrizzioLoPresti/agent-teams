@@ -109,6 +109,39 @@ These are mandatory. They encode the authoritative patterns for this codebase an
 
 Used internally by `speckit-implementer` for branch and commit management: `speckit-git-feature`, `speckit-git-commit`, `speckit-git-validate`, `speckit-git-remote`, `speckit-git-initialize`.
 
+### General Task Subagents — Skill Injection
+
+When the Orchestrator delegates a **simple, self-contained task** to a general-purpose subagent (not a SpecKit phase agent), it must still inject the relevant project skills based on what the task involves. General task subagents are framework-agnostic; without this injection they will produce code that violates codebase conventions.
+
+Analyze the task description and include every skill whose trigger condition matches:
+
+| Skill              | Include when the task involves...                                                   |
+| ------------------ | ----------------------------------------------------------------------------------- |
+| `auth`             | Any procedure, route, or component touching auth, sessions, users, or roles         |
+| `orpc-endpoints`   | Creating or modifying any file in `src/orpc/` or `src/data/`                        |
+| `react-components` | Creating or editing any `.tsx` component, form, table, modal, or UI element         |
+| `db-migrations`    | Editing `prisma/schema.prisma`, adding models/fields, or running any `db:*` command |
+| `folder-structure` | Creating any new file, domain, entity, or directory                                 |
+| `imports`          | Writing or editing any TypeScript or TSX file (import ordering is always required)  |
+| `frontend-design`  | Building any new page, layout, landing section, or significant UI surface           |
+| `vitest-tests`     | Writing, running, or fixing any test file                                           |
+| `skill-creator`    | Creating, editing, or evaluating agent skills                                       |
+| `seo-audit`        | Any SEO analysis, keyword research, or on-page optimization task                    |
+
+Append this block to the delegation message with the matched skills:
+
+```
+Project Skills — load via Skill tool before starting work:
+<list each matched skill, one per line>
+These skills encode the authoritative conventions for this codebase and override general knowledge. Load every listed skill before writing any file.
+```
+
+Rules:
+- **Always inject at minimum `folder-structure` and `imports`** when the task creates or edits any TypeScript/TSX file.
+- **Never inject SpecKit skills** (`speckit-*`) into general task subagents.
+- **Skip injection entirely** for tasks that are purely read-only or shell-only (no file writes).
+- **When in doubt, over-inject** — an unneeded skill is less harmful than a missing one.
+
 ## Project Rules
 
 - **No direct oRPC calls in components.** Always go through `src/data/*/` hooks.

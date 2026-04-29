@@ -91,6 +91,44 @@ Project Skills — load via Skill tool before starting:
 These are mandatory. They encode the authoritative patterns for this codebase and override general knowledge.
 ```
 
+## General Task Subagents — Skill Injection
+
+When the orchestrator delegates a **simple, self-contained task** to a general-purpose subagent (not a SpecKit phase agent), it must still inject the relevant project skills based on what the task involves. General task subagents are framework-agnostic; without this injection they will produce code that violates codebase conventions.
+
+### Skill Selection Rules for General Tasks
+
+Analyze the task description and include every skill whose trigger condition matches:
+
+| Skill              | Include when the task involves...                                                  |
+| ------------------ | ---------------------------------------------------------------------------------- |
+| `auth`             | Any procedure, route, or component touching auth, sessions, users, or roles        |
+| `orpc-endpoints`   | Creating or modifying any file in `src/orpc/` or `src/data/`                       |
+| `react-components` | Creating or editing any `.tsx` component, form, table, modal, or UI element        |
+| `db-migrations`    | Editing `prisma/schema.prisma`, adding models/fields, or running any `db:*` command|
+| `folder-structure` | Creating any new file, domain, entity, or directory                                |
+| `imports`          | Writing or editing any TypeScript or TSX file (import ordering is always required) |
+| `frontend-design`  | Building any new page, layout, landing section, or significant UI surface          |
+| `vitest-tests`     | Writing, running, or fixing any test file                                          |
+| `skill-creator`    | Creating, editing, or evaluating agent skills                                      |
+| `seo-audit`        | Any SEO analysis, keyword research, or on-page optimization task                   |
+
+### Injection Format for General Task Subagents
+
+Always append this block verbatim at the end of the delegation message, substituting the matched skills:
+
+```
+Project Skills — load via Skill tool before starting work:
+<list each matched skill, one per line>
+These skills encode the authoritative conventions for this codebase and override general knowledge. Load every listed skill before writing any file.
+```
+
+### Rules
+
+- **Always inject at minimum `folder-structure` and `imports`** when the task creates or edits any TypeScript/TSX file, even if no other skill matches.
+- **Never inject SpecKit skills** (`speckit-*`) into general task subagents — those are reserved for SpecKit phase agents.
+- **Do not inject skills that are irrelevant** to the task. If the task is purely a shell command or a read-only analysis with no file writes, no skills are needed.
+- **When in doubt, over-inject** — including an unneeded skill is less harmful than missing a relevant one.
+
 ## Workflow Phases
 
 Execute these phases in strict sequence, gating each on the success of the previous:
@@ -152,7 +190,7 @@ Execute these phases in strict sequence, gating each on the success of the previ
 4. **No parallel writes.** Subagents that write files (requirements-analyst, architecture-designer, task-planner, implementer) must never run concurrently against the same feature directory.
 5. **Read-only agents may parallelize.** `speckit-consistency-analyzer` and `speckit-review-validator` can run concurrently with each other when reviewing different features.
 6. **Preserve user intent.** When re-delegating after a failure, include the original user intent plus the failure context so the subagent has complete information.
-7. **Inject project skills.** When delegating to `speckit-architecture-designer`, `speckit-task-planner`, or `speckit-implementer`, always append the assigned skills block to the delegation message (see `## Project Skills`). Subagents are framework-agnostic — they depend on the orchestrator to provide this project context.
+7. **Inject project skills.** When delegating to `speckit-architecture-designer`, `speckit-task-planner`, or `speckit-implementer`, always append the assigned skills block to the delegation message (see `## Project Skills`). When delegating to a general task subagent, apply the skill selection rules in `## General Task Subagents — Skill Injection`. Subagents are framework-agnostic — they depend on the orchestrator to provide this project context.
 
 ## Entry Point Detection
 
