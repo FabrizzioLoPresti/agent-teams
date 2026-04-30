@@ -92,7 +92,7 @@ Skills assigned per subagent — inject exactly these when delegating:
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | `speckit-requirements-analyst`  | none — produces spec.md only, no code                                                                                           |
 | `speckit-clarification-agent`   | none — analyzes spec text only                                                                                                  |
-| `speckit-architecture-designer` | `folder-structure`, `orpc-endpoints`, `db-migrations`, `auth`                                                                   |
+| `speckit-architecture-designer` | `folder-structure`, `orpc-endpoints`, `db-migrations`, `auth`, `react-components`                                               |
 | `speckit-task-planner`          | `folder-structure`                                                                                                              |
 | `speckit-consistency-analyzer`  | none — read-only artifact analysis                                                                                              |
 | `speckit-implementer`           | `auth`, `orpc-endpoints`, `react-components`, `db-migrations`, `folder-structure`, `imports`, `frontend-design`, `vitest-tests` |
@@ -142,6 +142,7 @@ Rules:
 - **Never inject SpecKit skills** (`speckit-*`) into general task subagents.
 - **Skip injection entirely** for tasks that are purely read-only or shell-only (no file writes).
 - **When in doubt, over-inject** — an unneeded skill is less harmful than a missing one.
+- **`react-components` y `orpc-endpoints` son los skills más frecuentemente omitidos.** Cuando el task involucre cualquier archivo en `src/components/`, `src/data/`, o `src/orpc/`, estos skills son OBLIGATORIOS aunque parezca una tarea pequeña.
 
 ## Project Rules
 

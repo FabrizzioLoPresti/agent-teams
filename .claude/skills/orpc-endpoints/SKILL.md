@@ -391,30 +391,53 @@ Always check for conflicts *inside* the transaction when race conditions matter 
 
 ## Precise typing rule
 
-**Never use primitive `string`, `number`, or `boolean` when a more specific type exists.**
+**Never use primitive `string`, `number`, or `boolean` when a more specific indexed type exists.**
 
-When a prop, parameter, or variable holds the `id` of a domain entity, always use the indexed type from the corresponding domain type instead of `string`:
+This applies to **any field** of a domain entity — not just `id`. Whenever a prop, parameter, state field, or variable holds a value that maps to a field on a domain type, use the indexed type:
 
 ```ts
 // ❌ Wrong — too broad
 type Props = {
   complexId: string | undefined
+  complexTitle: string
+  complexTimezone: string
   fieldId: string
+  fieldTitle: string
+  isVisible: boolean
+  isDividable: boolean
 }
 
 // ✅ Correct — exact, refactor-safe
-import type { ComplexType } from '@/types/complex'
+import type { ComplexType, ComplexesTableResponseType } from '@/types/complex'
 import type { FieldType } from '@/types/field'
 
 type Props = {
   complexId: ComplexType['id'] | undefined
+  complexTitle: ComplexType['title']
+  complexTimezone: ComplexType['timezone']
   fieldId: FieldType['id']
+  fieldTitle: FieldType['title']
+  isVisible: FieldType['isVisible']
+  isDividable: FieldType['isDividable']
 }
 ```
 
-This applies everywhere: component props, hook parameters, oRPC input schemas (use `z.cuid()` not `z.string()`), and data hook signatures.
+This applies everywhere:
+- Component `type Props`
+- Hook parameters and return types
+- Local state type annotations (`useState<{ fieldTitle: FieldType['title'] }>`)
+- oRPC input schemas (use `z.cuid()` not `z.string()` for IDs)
+- Data hook signatures
+
+**When to use which type:**
+- Use the most specific schema type available. If a component receives data from a table response, use `ComplexesTableResponseType['field']`. If it receives data from the full entity, use `ComplexType['field']`.
+- For IDs always use the entity's own type: `ComplexType['id']`, `FieldType['id']`.
+- For booleans like `isVisible`, `isActive`, `isDividable` — always index from the domain type.
+- For strings like `title`, `timezone`, `timezone` — always index from the domain type.
+
+**Exception:** Generic UI utility types (e.g. a carousel that accepts `{ id: string; [key: string]: any }`) may use primitives when the component is intentionally domain-agnostic.
 
 Benefits:
-- If the `id` field type changes in the schema, TypeScript propagates the error automatically
-- Communicates intent — a reader knows this is an entity ID, not an arbitrary string
-- Prevents accidentally passing the wrong entity's ID (e.g. `complexId` where `fieldId` is expected)
+- If a field type changes in the schema, TypeScript propagates the error automatically
+- Communicates intent — a reader knows exactly which entity and field this value represents
+- Prevents accidentally passing the wrong entity's value (e.g. `complexTitle` where `fieldTitle` is expected)

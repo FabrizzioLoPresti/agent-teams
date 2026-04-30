@@ -77,7 +77,7 @@ Skills assigned per subagent — inject exactly these, no more:
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | `speckit-requirements-analyst`  | none — produces spec.md only, no code                                                                                           |
 | `speckit-clarification`         | none — analyzes spec text only                                                                                                  |
-| `speckit-architecture-designer` | `folder-structure`, `orpc-endpoints`, `db-migrations`, `auth`                                                                   |
+| `speckit-architecture-designer` | `folder-structure`, `orpc-endpoints`, `db-migrations`, `auth`, `react-components`                                               |
 | `speckit-task-planner`          | `folder-structure`                                                                                                              |
 | `speckit-consistency-analyzer`  | none — read-only artifact analysis                                                                                              |
 | `speckit-implementer`           | `auth`, `orpc-endpoints`, `react-components`, `db-migrations`, `folder-structure`, `imports`, `frontend-design`, `vitest-tests` |
@@ -128,6 +128,7 @@ These skills encode the authoritative conventions for this codebase and override
 - **Never inject SpecKit skills** (`speckit-*`) into general task subagents — those are reserved for SpecKit phase agents.
 - **Do not inject skills that are irrelevant** to the task. If the task is purely a shell command or a read-only analysis with no file writes, no skills are needed.
 - **When in doubt, over-inject** — including an unneeded skill is less harmful than missing a relevant one.
+- **`react-components` and `orpc-endpoints` are the most frequently omitted skills.** Any task touching files in `src/components/`, `src/data/`, or `src/orpc/` requires both skills, even for small changes.
 
 ## Workflow Phases
 
