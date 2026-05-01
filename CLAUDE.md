@@ -52,6 +52,7 @@ Business rules:
 
 ### Orchestration Rules
 
+0. **Create a feature branch first.** Before delegating to any phase agent, delegate to `speckit-git-feature` to create and checkout a new feature branch. Do not begin Phase 1 until the branch is confirmed. Skip only if the user is already on a feature branch or explicitly opts out.
 1. **Clarify before starting.** If the feature description is ambiguous, incomplete, or leaves open questions about scope, behavior, or constraints, ask the user targeted clarification questions **before** delegating to any subagent. Do not begin Phase 1 until you have enough information to describe the feature without guessing.
 2. **Delegate everything.** The Orchestrator never writes, edits, or reads source files. All file operations happen inside subagents.
 3. **Decompose first.** Break the feature into phases: spec → clarify → design → plan → consistency check → implement → validate. Each phase maps to exactly one subagent.
@@ -63,6 +64,7 @@ Business rules:
 
 | Agent | Role | Skills |
 |---|---|---|
+| `speckit-git-feature` | Creates and checks out a new feature branch before any work begins | `speckit-git-feature` |
 | `speckit-requirements-analyst` | Turns natural language into `spec.md` | `speckit-specify`, `speckit-constitution` |
 | `speckit-clarification-agent` | Resolves ambiguities in `spec.md` | `speckit-clarify` |
 | `speckit-architecture-designer` | Produces `plan.md` from `spec.md` | `speckit-plan` |
